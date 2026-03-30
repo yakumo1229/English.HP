@@ -57,8 +57,8 @@
             cursor: pointer;
         }
         
-        .admin-only { display: none; }
-        body.admin-mode .admin-only { display: block; }
+        .admin-only { display: none !important; }
+        body.admin-mode .admin-only { display: block !important; }
 
         #admin-controls {
             position: fixed; bottom: 2rem; right: 2rem; z-index: 100;
@@ -87,6 +87,21 @@
             align-items: center; justify-content: center;
         }
         #auth-modal.active { display: flex; }
+
+        .nav-tab {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 8px 16px;
+            border-radius: 99px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+        .nav-tab:hover {
+            color: var(--primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
 
         .calendar-container {
             position: relative;
@@ -147,6 +162,17 @@
             background: rgba(255,255,255,0.1);
         }
         .heat-map-dot.active { background: var(--primary); box-shadow: 0 0 5px var(--primary); }
+        
+        .mission-icon-container {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-right: 16px;
+        }
     </style>
 </head>
 <body>
@@ -155,22 +181,33 @@
 
     <nav class="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-white/10 px-6 py-4">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-8">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-blue-950 shadow-lg">
+                        <i class="fas fa-rocket text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-black leading-none admin-editable" id="site-title" contenteditable="false">STAR ENGLISH</h1>
+                        <p class="text-[9px] text-yellow-400 tracking-widest uppercase font-bold admin-editable" id="site-subtitle" contenteditable="false">Galactic Portal</p>
+                    </div>
+                </div>
+
+                <!-- Main Tabs -->
+                <div class="hidden lg:flex items-center space-x-2 border-l border-white/10 pl-8">
+                    <a id="tab-worksheet" href="#" target="_blank" class="nav-tab">Worksheet</a>
+                    <a id="tab-homework" href="#" target="_blank" class="nav-tab">Homework</a>
+                    <a id="tab-review" href="#" target="_blank" class="nav-tab">Review</a>
+                </div>
+            </div>
+
             <div class="flex items-center space-x-4">
-                <div class="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-blue-950 shadow-lg">
-                    <i class="fas fa-rocket text-xl"></i>
+                <!-- Admin Only URL Editor -->
+                <div class="admin-only flex space-x-2">
+                    <button onclick="editTabUrls()" class="text-[9px] text-yellow-400 border border-yellow-400/30 px-3 py-1 rounded-full hover:bg-yellow-400/10">TABS URL 編集</button>
                 </div>
-                <div>
-                    <h1 class="text-lg font-black leading-none admin-editable" id="site-title" contenteditable="false">STAR ENGLISH</h1>
-                    <p class="text-[9px] text-yellow-400 tracking-widest uppercase font-bold admin-editable" id="site-subtitle" contenteditable="false">Galactic Portal</p>
+                <div class="w-8 h-8 rounded-full bg-gray-800 border border-white/20 overflow-hidden">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User">
                 </div>
-            </div>
-            <div class="hidden md:flex space-x-8 text-xs font-bold uppercase tracking-widest">
-                <a href="#" class="text-yellow-400">Dashboard</a>
-                <a href="#mission-report" class="text-gray-400">Monthly Report</a>
-                <a href="#timeline" class="text-gray-400">Timeline</a>
-            </div>
-            <div class="w-8 h-8 rounded-full bg-gray-800 border border-white/20 overflow-hidden">
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User">
             </div>
         </div>
     </nav>
@@ -321,12 +358,17 @@
             siteSubtitle: "Galactic Portal",
             weeklyGoal: '"Step out of your comfort zone today!"',
             teacherName: "Mr. Anderson",
+            tabUrls: {
+                worksheet: "#",
+                homework: "#",
+                review: "#"
+            },
             missions: [
-                { id: 1, title: "Daily Vocabulary Quiz", desc: "Review 10 new words", exp: 50, completed: false },
-                { id: 2, title: "Shadowing Practice", desc: "5 Minutes with TED Talk", exp: 100, completed: false },
-                { id: 3, title: "Writing Journal", desc: "Describe your breakfast", exp: 30, completed: false }
+                { id: 1, title: "Daily Vocabulary Quiz", desc: "Review 10 new words", exp: 50, completed: false, icon: "fas fa-spell-check" },
+                { id: 2, title: "Shadowing Practice", desc: "5 Minutes with TED Talk", exp: 100, completed: false, icon: "fas fa-microphone" },
+                { id: 3, title: "Writing Journal", desc: "Describe your breakfast", exp: 30, completed: false, icon: "fas fa-pen-nib" }
             ],
-            history: {}, // Key: "YYYY-MM-DD", Value: { completed: 2, total: 3 }
+            history: {}, 
             events: []
         };
 
@@ -422,11 +464,15 @@
             appData.missions.forEach((m) => {
                 const div = document.createElement('div');
                 div.className = 'glass-card p-5 flex justify-between items-center';
+                const iconClass = m.icon || 'fas fa-rocket';
                 div.innerHTML = `
                     <div class="flex items-center">
                         <input type="checkbox" class="mission-checkbox mr-4" 
                                ${m.completed ? 'checked' : ''} 
                                onchange="updateMissionStatus(${m.id}, this.checked)">
+                        <div class="mission-icon-container text-yellow-400 cursor-pointer" onclick="editMissionIcon(${m.id})" title="アイコンを変更">
+                            <i class="${iconClass}"></i>
+                        </div>
                         <div>
                             <p class="text-sm font-bold ${m.completed ? 'line-through text-gray-500' : ''}">${m.title}</p>
                             <p class="text-[10px] text-gray-500 italic">${m.desc}</p>
@@ -506,15 +552,46 @@
 
         // --- UI HELPERS ---
 
+        function editTabUrls() {
+            const w = prompt("WORKSHEET URL:", appData.tabUrls.worksheet);
+            const h = prompt("HOMEWORK URL:", appData.tabUrls.homework);
+            const r = prompt("REVIEW URL:", appData.tabUrls.review);
+            
+            if (w !== null) appData.tabUrls.worksheet = w;
+            if (h !== null) appData.tabUrls.homework = h;
+            if (r !== null) appData.tabUrls.review = r;
+            
+            updateTabHrefs();
+            showToast("TABS UPDATED");
+        }
+
+        function updateTabHrefs() {
+            document.getElementById('tab-worksheet').href = appData.tabUrls.worksheet || "#";
+            document.getElementById('tab-homework').href = appData.tabUrls.homework || "#";
+            document.getElementById('tab-review').href = appData.tabUrls.review || "#";
+        }
+
         function addMission() {
             const title = prompt("Mission Title:");
             if (!title) return;
             const desc = prompt("Description:");
+            const icon = prompt("Icon Class (Font Awesome, e.g., fas fa-star):", "fas fa-rocket");
             const exp = parseInt(prompt("EXP Reward:", "50")) || 50;
             const newId = Date.now();
-            appData.missions.push({ id: newId, title, desc, exp, completed: false });
+            appData.missions.push({ id: newId, title, desc, exp, completed: false, icon: icon || "fas fa-rocket" });
             renderMissions();
             saveAllData();
+        }
+
+        function editMissionIcon(id) {
+            if (!document.body.classList.contains('admin-mode')) return;
+            const mission = appData.missions.find(m => m.id === id);
+            const newIcon = prompt("New Icon Class (e.g., fas fa-lightbulb):", mission.icon);
+            if (newIcon) {
+                mission.icon = newIcon;
+                renderMissions();
+                saveAllData();
+            }
         }
 
         function deleteMission(id) {
@@ -547,6 +624,7 @@
         function toggleAdminMode(state) {
             document.body.classList.toggle('admin-mode', state);
             document.querySelectorAll('.admin-editable').forEach(el => el.contentEditable = state);
+            renderMissions(); 
         }
 
         function loadSavedData() {
@@ -554,7 +632,7 @@
             if (saved) {
                 const parsed = JSON.parse(saved);
                 appData = { ...appData, ...parsed };
-                // Reset daily missions if it's a new day (very simplified)
+                
                 const today = new Date().toISOString().split('T')[0];
                 if (!appData.history[today]) {
                     appData.missions.forEach(m => m.completed = false);
@@ -564,6 +642,7 @@
                 document.getElementById('site-subtitle').innerText = appData.siteSubtitle;
                 document.getElementById('weekly-goal').innerText = appData.weeklyGoal;
                 document.getElementById('teacher-name').innerText = appData.teacherName;
+                updateTabHrefs();
             }
         }
 
@@ -572,6 +651,7 @@
             appData.siteSubtitle = document.getElementById('site-subtitle').innerText;
             appData.weeklyGoal = document.getElementById('weekly-goal').innerText;
             appData.teacherName = document.getElementById('teacher-name').innerText;
+            
             localStorage.setItem('starEnglishData', JSON.stringify(appData));
             showToast("DATA SAVED");
             toggleAdminMode(false);
