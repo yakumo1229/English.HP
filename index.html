@@ -3,282 +3,612 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Star English - Class Portal</title>
+    <title>Star English - Galaxy Admin Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Poppins:wght@400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&family=Poppins:wght@300;400;600;700&display=swap');
+
+        :root {
+            --primary: #fbbf24;
+            --accent: #60a5fa;
+            --bg-dark: #050b1a;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
 
         body {
             font-family: 'Poppins', 'Noto Sans JP', sans-serif;
-            background-color: #0a192f;
-            color: #e2e8f0;
+            background-color: var(--bg-dark);
+            color: #f1f5f9;
             overflow-x: hidden;
             scroll-behavior: smooth;
         }
 
-        .star-bg {
+        .universe {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1;
-            background: radial-gradient(circle at center, #112240 0%, #0a192f 100%);
+            background: radial-gradient(circle at 50% 50%, #1a2a4a 0%, #050b1a 100%);
         }
 
-        .star {
-            position: absolute;
-            background: #fbbf24;
-            border-radius: 50%;
-            opacity: 0.5;
-            animation: twinkle var(--duration) infinite ease-in-out;
-        }
-
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
-        }
+        .star { position: absolute; background: #fff; border-radius: 50%; pointer-events: none; }
+        .twinkle { animation: twinkle var(--duration) infinite ease-in-out; }
+        @keyframes twinkle { 0%, 100% { opacity: 0.2; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.3); } }
 
         .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--glass);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
             border-radius: 1.5rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
         }
 
-        .glass-card:hover {
-            transform: translateY(-5px);
-            border-color: #fbbf24;
+        .admin-editable {
+            transition: all 0.2s;
+            border: 1px dashed transparent;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        body.admin-mode .admin-editable {
+            border-color: var(--primary);
+            background: rgba(251, 191, 36, 0.15);
+            cursor: pointer;
+        }
+        
+        .admin-only { display: none; }
+        body.admin-mode .admin-only { display: block; }
+
+        #admin-controls {
+            position: fixed; bottom: 2rem; right: 2rem; z-index: 100;
+            display: flex; flex-direction: column; gap: 1rem;
         }
 
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 2px;
+        .control-btn {
+            width: 3.5rem; height: 3.5rem; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .calendar-day {
-            aspect-ratio: 1 / 1;
-            display: flex;
+        #settings-trigger { background: var(--primary); color: var(--bg-dark); }
+        #save-btn { background: #10b981; color: white; display: none; }
+        #cancel-btn { background: #ef4444; color: white; display: none; }
+
+        body.admin-mode #settings-trigger { display: none; }
+        body.admin-mode #save-btn, body.admin-mode #cancel-btn { display: flex; }
+
+        #auth-modal {
+            display: none;
+            position: fixed; inset: 0; z-index: 200;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            align-items: center; justify-content: center;
+        }
+        #auth-modal.active { display: flex; }
+
+        .calendar-container {
+            position: relative;
+            padding-bottom: 120%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .calendar-container iframe {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            border: 0;
+            filter: invert(90%) hue-rotate(180deg) brightness(1.2);
+        }
+
+        .sync-indicator {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
+            font-size: 10px;
+            color: #60a5fa;
+            background: rgba(96, 165, 250, 0.1);
+            padding: 2px 8px;
+            border-radius: 99px;
+            margin-bottom: 8px;
+        }
+        
+        .loading-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .mission-checkbox {
+            appearance: none;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid rgba(255,255,255,0.2);
             border-radius: 0.5rem;
             cursor: pointer;
+            position: relative;
             transition: all 0.2s;
         }
-
-        .calendar-day:hover {
-            background: rgba(251, 191, 36, 0.2);
+        .mission-checkbox:checked {
+            background: var(--primary);
+            border-color: var(--primary);
         }
-
-        .calendar-day.has-event {
-            color: #fbbf24;
-            font-weight: bold;
-            position: relative;
-        }
-
-        .calendar-day.has-event::after {
-            content: '';
+        .mission-checkbox:checked::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #050b1a;
+            font-size: 0.8rem;
             position: absolute;
-            bottom: 4px;
-            width: 4px;
-            height: 4px;
-            background: #fbbf24;
-            border-radius: 50%;
-            box-shadow: 0 0 5px #fbbf24;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
         }
 
-        .calendar-day.today {
-            background: #fbbf24;
-            color: #0a192f;
-            font-weight: bold;
+        .heat-map-dot {
+            width: 8px; height: 8px; border-radius: 2px;
+            background: rgba(255,255,255,0.1);
         }
-
-        @keyframes highlight-glow {
-            0% { box-shadow: 0 0 0px rgba(251, 191, 36, 0); border-color: rgba(255, 255, 255, 0.1); }
-            50% { box-shadow: 0 0 30px rgba(251, 191, 36, 0.6); border-color: rgba(251, 191, 36, 1); transform: scale(1.02); }
-            100% { box-shadow: 0 0 0px rgba(251, 191, 36, 0); border-color: rgba(255, 255, 255, 0.1); }
-        }
-
-        .highlight-event {
-            animation: highlight-glow 2s ease-out;
-        }
+        .heat-map-dot.active { background: var(--primary); box-shadow: 0 0 5px var(--primary); }
     </style>
 </head>
 <body>
 
-    <div id="star-container" class="star-bg"></div>
+    <div id="universe" class="universe"></div>
 
-    <nav class="p-6 flex justify-between items-center max-w-7xl mx-auto">
-        <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center text-blue-900 shadow-lg">
-                <i class="fas fa-graduation-cap text-xl"></i>
+    <nav class="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-white/10 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-blue-950 shadow-lg">
+                    <i class="fas fa-rocket text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-black leading-none admin-editable" id="site-title" contenteditable="false">STAR ENGLISH</h1>
+                    <p class="text-[9px] text-yellow-400 tracking-widest uppercase font-bold admin-editable" id="site-subtitle" contenteditable="false">Galactic Portal</p>
+                </div>
             </div>
-            <div>
-                <span class="block text-lg font-bold leading-none">STAR ENGLISH</span>
-                <span class="text-[10px] text-yellow-400 tracking-widest uppercase">Class Portal</span>
+            <div class="hidden md:flex space-x-8 text-xs font-bold uppercase tracking-widest">
+                <a href="#" class="text-yellow-400">Dashboard</a>
+                <a href="#mission-report" class="text-gray-400">Monthly Report</a>
+                <a href="#timeline" class="text-gray-400">Timeline</a>
             </div>
-        </div>
-        <div class="hidden md:flex space-x-8 text-sm font-medium">
-            <a href="#" class="hover:text-yellow-400 transition">Home</a>
-            <a href="#schedule-anchor" class="hover:text-yellow-400 transition">Schedule</a>
-            <a href="#" class="hover:text-yellow-400 transition">Homework</a>
-        </div>
-        <div class="flex items-center space-x-4">
-            <div class="text-right hidden sm:block">
-                <p class="text-xs font-bold">Student Name</p>
-                <p class="text-[10px] text-gray-400">Class 2-A #15</p>
-            </div>
-            <div class="w-10 h-10 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center">
-                <i class="fas fa-user text-gray-400"></i>
+            <div class="w-8 h-8 rounded-full bg-gray-800 border border-white/20 overflow-hidden">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User">
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-6 py-6">
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            <!-- Left: Info -->
-            <div class="lg:col-span-1 space-y-6">
-                <div class="glass-card p-6 border-t-4 border-yellow-400">
-                    <h3 class="text-[10px] font-bold text-yellow-400 mb-4 tracking-widest">WEEKLY GOAL</h3>
-                    <p class="text-lg font-bold italic leading-tight">"Step out of your comfort zone!"</p>
-                </div>
-
-                <div class="glass-card p-6 bg-gradient-to-br from-yellow-400/10 to-transparent">
-                    <div class="flex items-center space-x-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-                            <i class="fas fa-user-tie text-white text-xs"></i>
-                        </div>
-                        <span class="text-xs font-bold text-gray-200">Teacher's Note</span>
-                    </div>
-                    <p class="text-xs text-gray-400 leading-relaxed">
-                        今週のカレンダーを更新しました。20日の単語テストを忘れないように！
-                    </p>
-                </div>
-            </div>
-
-            <!-- Middle: Main Feed -->
-            <div class="lg:col-span-2 space-y-8">
-                <div class="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-center">
-                    <i class="fas fa-info-circle text-blue-400 mr-4"></i>
-                    <p class="text-xs">Next Assignment: Essay due in 3 days.</p>
-                </div>
-
-                <h2 class="text-2xl font-bold italic">Today's Missions</h2>
-                
-                <div class="space-y-4">
-                    <div class="glass-card p-6">
-                        <div class="flex justify-between mb-4">
-                            <h4 class="font-bold">Unit 5 Vocabulary Drill</h4>
-                            <span class="text-[10px] text-yellow-400 border border-yellow-400/30 px-2 py-0.5 rounded">HIGH PRIORITY</span>
-                        </div>
-                        <button class="bg-white text-blue-900 px-6 py-2 rounded-xl text-xs font-bold hover:bg-yellow-400 transition">Start Study</button>
-                    </div>
-                </div>
-
-                <!-- Schedule Anchor -->
-                <div id="schedule-anchor" class="pt-4">
-                    <h2 class="text-2xl font-bold italic mb-6">Upcoming Events</h2>
-                    <div class="space-y-4">
-                        <div id="event-20" class="glass-card p-6 border-l-4 border-yellow-400">
-                            <div class="flex items-center">
-                                <div class="text-center w-12 border-r border-gray-700 mr-6">
-                                    <p class="text-[10px] text-gray-500">MAR</p>
-                                    <p class="text-xl font-bold">20</p>
-                                </div>
-                                <div>
-                                    <h5 class="text-sm font-bold">Unit 4 Word Test</h5>
-                                    <p class="text-[10px] text-gray-500">Location: Classroom 2A</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="event-25" class="glass-card p-6 border-l-4 border-blue-400">
-                            <div class="flex items-center">
-                                <div class="text-center w-12 border-r border-gray-700 mr-6">
-                                    <p class="text-[10px] text-gray-500">MAR</p>
-                                    <p class="text-xl font-bold">25</p>
-                                </div>
-                                <div>
-                                    <h5 class="text-sm font-bold">Homework Deadline</h5>
-                                    <p class="text-[10px] text-gray-500">Essay Submission Online</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right: Calendar & Progress -->
-            <div class="lg:col-span-1 space-y-6">
-                <!-- Calendar -->
+            <!-- Left Side: Stats & Feedback -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- Achievement Goal -->
                 <div class="glass-card p-6">
-                    <h3 class="text-[10px] font-bold text-gray-400 mb-6 tracking-widest text-center uppercase">March 2026</h3>
-                    <div class="calendar-grid text-center mb-2 text-[8px] text-gray-600 font-bold">
-                        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-                    </div>
-                    <div class="calendar-grid">
-                        <!-- Example Calendar row -->
-                        <span class="calendar-day opacity-20">28</span><span class="calendar-day">1</span><span class="calendar-day">2</span><span class="calendar-day">3</span><span class="calendar-day">4</span><span class="calendar-day">5</span><span class="calendar-day">6</span>
-                        <span class="calendar-day">7</span><span class="calendar-day">8</span><span class="calendar-day">9</span><span class="calendar-day">10</span><span class="calendar-day">11</span><span class="calendar-day">12</span><span class="calendar-day">13</span>
-                        <span class="calendar-day">14</span><span class="calendar-day">15</span><span class="calendar-day">16</span><span class="calendar-day today">17</span><span class="calendar-day">18</span><span class="calendar-day">19</span>
-                        <span class="calendar-day has-event" data-target="event-20">20</span>
-                        <span class="calendar-day">21</span><span class="calendar-day">22</span><span class="calendar-day">23</span><span class="calendar-day">24</span>
-                        <span class="calendar-day has-event" data-target="event-25">25</span>
-                        <span class="calendar-day">26</span><span class="calendar-day">27</span><span class="calendar-day">28</span><span class="calendar-day">29</span><span class="calendar-day">30</span><span class="calendar-day">31</span>
-                    </div>
-                    <p class="text-[8px] text-gray-500 mt-4 text-center italic">Click dates with dots to jump</p>
+                    <h3 class="text-[9px] font-bold text-yellow-400 mb-3 tracking-widest uppercase">Weekly Mantra</h3>
+                    <p class="text-md font-bold italic text-white admin-editable" id="weekly-goal" contenteditable="false">"Step out of your comfort zone today!"</p>
                 </div>
 
-                <!-- Progress Tracker -->
-                <div class="glass-card p-6 text-center">
-                    <h3 class="text-[10px] font-bold text-gray-400 mb-4 tracking-widest uppercase">Progress</h3>
-                    <div class="relative w-20 h-20 mx-auto mb-4">
-                        <svg class="w-full h-full" viewBox="0 0 36 36">
-                            <path class="text-gray-800" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            <path class="text-yellow-400" stroke-dasharray="75, 100" stroke-width="3" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        </svg>
-                        <div class="absolute inset-0 flex items-center justify-center font-bold text-sm">75%</div>
+                <!-- Monthly Feedback -->
+                <div id="mission-report" class="glass-card p-6 border-t-4 border-yellow-400">
+                    <h3 class="text-[9px] font-bold text-yellow-400 mb-4 tracking-widest uppercase">Monthly Feedback</h3>
+                    <div class="flex items-center space-x-3 mb-4">
+                        <img src="https://api.dicebear.com/7.x/micah/svg?seed=Teacher" class="w-10 h-10 rounded-full bg-blue-900 border border-blue-400/30" alt="T">
+                        <div>
+                            <span class="block text-[10px] font-bold admin-editable" id="teacher-name" contenteditable="false">Mr. Anderson</span>
+                            <span class="text-[8px] text-blue-400 uppercase tracking-tighter">Captain Instructor</span>
+                        </div>
+                    </div>
+                    <p id="monthly-feedback-text" class="text-xs text-gray-300 italic leading-relaxed">
+                        "Your journey has just begun. Complete more missions to receive specific feedback on your orbital progress!"
+                    </p>
+                    
+                    <div class="mt-6">
+                        <div class="flex justify-between text-[9px] font-bold mb-1">
+                            <span>MONTHLY COMPLETION</span>
+                            <span id="completion-rate">0%</span>
+                        </div>
+                        <div class="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                            <div id="completion-bar" class="bg-yellow-400 h-full transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Heatmap Lite -->
+                <div class="glass-card p-5">
+                    <h3 class="text-[9px] font-bold text-gray-500 mb-3 tracking-widest uppercase text-center">Activity Logs</h3>
+                    <div id="activity-heatmap" class="grid grid-cols-7 gap-1">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Side: Daily Missions & Timeline -->
+            <div class="lg:col-span-6 space-y-8">
+                <!-- Missions -->
+                <section>
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-xl font-black italic"><i class="fas fa-bullseye text-yellow-400 mr-3"></i>Daily Missions</h2>
+                            <p class="text-[10px] text-gray-500">Reset at midnight (GST)</p>
+                        </div>
+                        <button onclick="addMission()" class="admin-only text-[10px] bg-yellow-400 text-blue-950 px-3 py-1 rounded font-bold hover:bg-yellow-300 transition">+ Add Mission</button>
+                    </div>
+                    <div id="mission-list" class="space-y-4">
+                        <!-- Loaded via JS -->
+                    </div>
+                </section>
+
+                <!-- Timeline -->
+                <section id="timeline">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-xl font-black italic"><i class="fas fa-calendar-alt text-blue-400 mr-3"></i>Upcoming Timeline</h2>
+                            <div id="sync-status" class="sync-indicator mt-1">
+                                <i class="fas fa-sync-alt mr-1"></i> Syncing...
+                            </div>
+                        </div>
+                    </div>
+                    <div id="event-list" class="space-y-4">
+                        <!-- Loaded via JS -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Side: Calendar & Social -->
+            <div class="lg:col-span-3 space-y-6">
+                <div class="glass-card p-4">
+                    <h3 class="text-[10px] font-bold text-yellow-400 mb-4 tracking-widest text-center uppercase">Galactic Schedule</h3>
+                    <div id="calendar-embed-container" class="calendar-container"></div>
+                </div>
+
+                <div class="glass-card p-6">
+                    <h3 class="text-[9px] font-bold text-gray-400 mb-4 tracking-widest uppercase">Leaderboard Orbit</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between text-xs">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-yellow-400 font-bold">01</span>
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=S" class="w-6 h-6 rounded-full bg-white/10">
+                                <span>Sarah.J</span>
+                            </div>
+                            <span class="font-mono text-gray-400">2,450 XP</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-gray-400 font-bold">02</span>
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Y" class="w-6 h-6 rounded-full bg-white/10">
+                                <span>You</span>
+                            </div>
+                            <span id="user-xp" class="font-mono text-yellow-400">1,200 XP</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- Admin Tools -->
+    <div id="admin-controls">
+        <div id="cancel-btn" class="control-btn" onclick="exitAdminMode()" title="キャンセル">
+            <i class="fas fa-times text-xl"></i>
+        </div>
+        <div id="save-btn" class="control-btn" onclick="saveAllData()" title="保存">
+            <i class="fas fa-save text-xl"></i>
+        </div>
+        <div id="settings-trigger" class="control-btn" onclick="requestAdminAccess()" title="設定">
+            <i class="fas fa-cog text-xl"></i>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="auth-modal">
+        <div class="glass-card p-8 w-80 text-center border-yellow-400/50">
+            <h3 class="text-lg font-bold mb-4 uppercase tracking-widest text-yellow-400">Admin Control</h3>
+            <input type="password" id="admin-pass" placeholder="PASSWORD" class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:border-yellow-400 text-center tracking-widest">
+            <div class="flex space-x-2">
+                <button onclick="closeAuthModal()" class="flex-1 py-3 rounded-xl bg-white/5 text-[10px] font-bold">CANCEL</button>
+                <button onclick="checkPassword()" class="flex-1 py-3 rounded-xl bg-yellow-400 text-blue-950 text-[10px] font-bold">LOGIN</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // --- CONFIG ---
+        const GOOGLE_CALENDAR_ID = 'c_classroomaf2ef12b@group.calendar.google.com';
+        const SPREADSHEET_ID = 'e/2PACX-1vTjUjrMcRPliq-19hgupjcvH-sJg583cEuaT0dZIGxsc31TSVNNjUCryaAtvMqDjcVKdKllsZrpRr6q'; 
+        const ADMIN_PASS = "893012";
+
+        // APP STATE
+        let appData = {
+            siteTitle: "STAR ENGLISH",
+            siteSubtitle: "Galactic Portal",
+            weeklyGoal: '"Step out of your comfort zone today!"',
+            teacherName: "Mr. Anderson",
+            missions: [
+                { id: 1, title: "Daily Vocabulary Quiz", desc: "Review 10 new words", exp: 50, completed: false },
+                { id: 2, title: "Shadowing Practice", desc: "5 Minutes with TED Talk", exp: 100, completed: false },
+                { id: 3, title: "Writing Journal", desc: "Describe your breakfast", exp: 30, completed: false }
+            ],
+            history: {}, // Key: "YYYY-MM-DD", Value: { completed: 2, total: 3 }
+            events: []
+        };
+
         window.onload = function() {
-            // 背景の星を生成
-            const container = document.getElementById('star-container');
-            for (let i = 0; i < 100; i++) {
+            loadSavedData();
+            initUniverse();
+            initCalendarEmbed();
+            renderMissions();
+            renderHeatmap();
+            updateReport();
+            syncAllCloudData();
+        };
+
+        // --- CORE FUNCTIONS ---
+        
+        function updateMissionStatus(id, checked) {
+            const mission = appData.missions.find(m => m.id === id);
+            if (mission) {
+                mission.completed = checked;
+                saveHistory();
+                updateReport();
+                renderHeatmap();
+                localStorage.setItem('starEnglishData', JSON.stringify(appData));
+            }
+        }
+
+        function saveHistory() {
+            const today = new Date().toISOString().split('T')[0];
+            const completedCount = appData.missions.filter(m => m.completed).length;
+            const totalCount = appData.missions.length;
+            appData.history[today] = { completed: completedCount, total: totalCount };
+        }
+
+        function updateReport() {
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            
+            let totalPossible = 0;
+            let totalCompleted = 0;
+
+            Object.keys(appData.history).forEach(dateStr => {
+                const date = new Date(dateStr);
+                if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+                    totalPossible += appData.history[dateStr].total;
+                    totalCompleted += appData.history[dateStr].completed;
+                }
+            });
+
+            const rate = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+            
+            // Update UI
+            document.getElementById('completion-rate').innerText = rate + '%';
+            document.getElementById('completion-bar').style.width = rate + '%';
+
+            // Automatic Feedback
+            const feedbackEl = document.getElementById('monthly-feedback-text');
+            if (totalPossible === 0) {
+                feedbackEl.innerText = "Welcome to the new month! Start your missions to see progress.";
+            } else if (rate < 30) {
+                feedbackEl.innerText = "Engines are still cold. Let's try to complete at least one mission every day to stay in orbit!";
+            } else if (rate < 70) {
+                feedbackEl.innerText = "Good steady pace! You are maintaining a stable orbit. Keep pushing to break through into deep space!";
+            } else {
+                feedbackEl.innerText = "Incredible work! Your commitment is radiating like a supernova. You are definitely ready for higher-level challenges.";
+            }
+        }
+
+        function renderHeatmap() {
+            const grid = document.getElementById('activity-heatmap');
+            grid.innerHTML = '';
+            
+            const now = new Date();
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const monthStart = now.toISOString().slice(0, 8); // "YYYY-MM-"
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayStr = monthStart + String(i).padStart(2, '0');
+                const dot = document.createElement('div');
+                dot.className = 'heat-map-dot';
+                
+                if (appData.history[dayStr] && appData.history[dayStr].completed > 0) {
+                    dot.classList.add('active');
+                }
+                dot.title = `Day ${i}: ${appData.history[dayStr]?.completed || 0} missions`;
+                grid.appendChild(dot);
+            }
+        }
+
+        function renderMissions() {
+            const list = document.getElementById('mission-list');
+            list.innerHTML = '';
+            appData.missions.forEach((m) => {
+                const div = document.createElement('div');
+                div.className = 'glass-card p-5 flex justify-between items-center';
+                div.innerHTML = `
+                    <div class="flex items-center">
+                        <input type="checkbox" class="mission-checkbox mr-4" 
+                               ${m.completed ? 'checked' : ''} 
+                               onchange="updateMissionStatus(${m.id}, this.checked)">
+                        <div>
+                            <p class="text-sm font-bold ${m.completed ? 'line-through text-gray-500' : ''}">${m.title}</p>
+                            <p class="text-[10px] text-gray-500 italic">${m.desc}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] bg-yellow-400/20 text-yellow-400 px-3 py-1 rounded-full font-bold">+${m.exp} XP</span>
+                        <button class="admin-only text-red-400 p-2" onclick="deleteMission(${m.id})"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        async function syncAllCloudData() {
+            const status = document.getElementById('sync-status');
+            status.innerHTML = '<i class="fas fa-sync-alt mr-1 loading-spin"></i> Syncing...';
+            
+            if (SPREADSHEET_ID) {
+                try {
+                    const sheetUrl = SPREADSHEET_ID.startsWith('e/') 
+                        ? `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/pub?output=csv`
+                        : `https://docs.google.com/spreadsheets/d/e/${SPREADSHEET_ID}/pub?output=csv`;
+                    
+                    const response = await fetch(sheetUrl);
+                    if (!response.ok) throw new Error("Fetch failed");
+                    
+                    const csvData = await response.text();
+                    const rows = csvData.split('\n').slice(1); 
+                    
+                    const sheetEvents = rows.map(row => {
+                        const cols = row.split(',').map(c => c.trim());
+                        if(cols.length < 3 || !cols[2]) return null;
+
+                        return {
+                            day: cols[0] || "??",
+                            month: cols[1] || "???",
+                            title: cols[2],
+                            info: cols[3] || "",
+                            color: (cols[4] || "blue").toLowerCase(),
+                            source: 'Sheet'
+                        };
+                    }).filter(e => e !== null);
+                    
+                    appData.events = sheetEvents;
+                    renderEvents();
+                    status.innerHTML = '<i class="fas fa-check-circle mr-1 text-green-400"></i> Cloud Active';
+                } catch (e) { 
+                    console.error("Sheet sync failed", e);
+                    status.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400"></i> Sync Error';
+                }
+            }
+        }
+
+        function renderEvents() {
+            const list = document.getElementById('event-list');
+            list.innerHTML = '';
+            appData.events.forEach((e) => {
+                const div = document.createElement('div');
+                const borderColors = { blue: 'border-blue-400', yellow: 'border-yellow-400', red: 'border-red-400', green: 'border-green-400' };
+                const borderColor = borderColors[e.color] || 'border-blue-400';
+                div.className = `glass-card p-5 border-l-4 ${borderColor} flex items-center mb-4`;
+                div.innerHTML = `
+                    <div class="text-center w-12 border-r border-white/10 mr-6">
+                        <p class="text-[9px] text-gray-500 font-bold uppercase">${e.month}</p>
+                        <p class="text-xl font-black">${e.day}</p>
+                    </div>
+                    <div class="flex-grow">
+                        <h5 class="text-sm font-bold">${e.title}</h5>
+                        <p class="text-[10px] text-gray-400">${e.info}</p>
+                        <span class="text-[7px] text-blue-400 font-bold uppercase tracking-widest"><i class="fas fa-database mr-1"></i>${e.source}</span>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // --- UI HELPERS ---
+
+        function addMission() {
+            const title = prompt("Mission Title:");
+            if (!title) return;
+            const desc = prompt("Description:");
+            const exp = parseInt(prompt("EXP Reward:", "50")) || 50;
+            const newId = Date.now();
+            appData.missions.push({ id: newId, title, desc, exp, completed: false });
+            renderMissions();
+            saveAllData();
+        }
+
+        function deleteMission(id) {
+            if(!confirm("Delete this mission?")) return;
+            appData.missions = appData.missions.filter(m => m.id !== id);
+            renderMissions();
+            saveAllData();
+        }
+
+        function requestAdminAccess() {
+            document.getElementById('auth-modal').classList.add('active');
+            document.getElementById('admin-pass').focus();
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.remove('active');
+            document.getElementById('admin-pass').value = '';
+        }
+
+        function checkPassword() {
+            if (document.getElementById('admin-pass').value === ADMIN_PASS) {
+                closeAuthModal();
+                toggleAdminMode(true);
+                showToast("ADMIN MODE ENABLED");
+            } else {
+                showToast("INVALID PASSWORD");
+            }
+        }
+
+        function toggleAdminMode(state) {
+            document.body.classList.toggle('admin-mode', state);
+            document.querySelectorAll('.admin-editable').forEach(el => el.contentEditable = state);
+        }
+
+        function loadSavedData() {
+            const saved = localStorage.getItem('starEnglishData');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                appData = { ...appData, ...parsed };
+                // Reset daily missions if it's a new day (very simplified)
+                const today = new Date().toISOString().split('T')[0];
+                if (!appData.history[today]) {
+                    appData.missions.forEach(m => m.completed = false);
+                }
+                
+                document.getElementById('site-title').innerText = appData.siteTitle;
+                document.getElementById('site-subtitle').innerText = appData.siteSubtitle;
+                document.getElementById('weekly-goal').innerText = appData.weeklyGoal;
+                document.getElementById('teacher-name').innerText = appData.teacherName;
+            }
+        }
+
+        function saveAllData() {
+            appData.siteTitle = document.getElementById('site-title').innerText;
+            appData.siteSubtitle = document.getElementById('site-subtitle').innerText;
+            appData.weeklyGoal = document.getElementById('weekly-goal').innerText;
+            appData.teacherName = document.getElementById('teacher-name').innerText;
+            localStorage.setItem('starEnglishData', JSON.stringify(appData));
+            showToast("DATA SAVED");
+            toggleAdminMode(false);
+        }
+
+        function exitAdminMode() {
+            loadSavedData();
+            toggleAdminMode(false);
+            showToast("CHANGES DISCARDED");
+        }
+
+        function initUniverse() {
+            const container = document.getElementById('universe');
+            for (let i = 0; i < 80; i++) {
                 const star = document.createElement('div');
-                star.className = 'star';
-                star.style.left = `${Math.random() * 100}%`;
-                star.style.top = `${Math.random() * 100}%`;
-                const size = Math.random() * 2;
-                star.style.width = `${size}px`;
-                star.style.height = `${size}px`;
-                star.style.setProperty('--duration', `${2 + Math.random() * 4}s`);
+                star.className = 'star' + (Math.random() > 0.8 ? ' twinkle' : '');
+                star.style.width = star.style.height = (Math.random() * 2 + 1) + 'px';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', (2 + Math.random() * 3) + 's');
                 container.appendChild(star);
             }
+        }
 
-            // カレンダーの日付をクリックして移動
-            const eventDays = document.querySelectorAll('.calendar-day.has-event');
-            eventDays.forEach(day => {
-                day.addEventListener('click', function() {
-                    const targetId = this.getAttribute('data-target');
-                    const targetEl = document.getElementById(targetId);
-                    if (targetEl) {
-                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        targetEl.classList.remove('highlight-event');
-                        void targetEl.offsetWidth; // リセット
-                        targetEl.classList.add('highlight-event');
-                    }
-                });
-            });
-        };
+        function initCalendarEmbed() {
+            const container = document.getElementById('calendar-embed-container');
+            const encodedId = encodeURIComponent(GOOGLE_CALENDAR_ID);
+            container.innerHTML = `<iframe src="https://calendar.google.com/calendar/embed?src=${encodedId}&ctz=Asia%2FTokyo&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=0&showCalendars=0&showTz=0&wkst=1&bgcolor=%23050b1a" style="border:0" width="100%" height="100%" frameborder="0" scrolling="no"></iframe>`;
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-12 left-1/2 -translate-x-1/2 bg-yellow-400 text-blue-950 px-6 py-2 rounded-full font-black z-[200] text-[10px] uppercase shadow-2xl';
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
     </script>
 </body>
 </html>
