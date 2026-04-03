@@ -171,7 +171,7 @@
             justify-content: center;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 12px;
-            margin-right: 16px;
+            margin-right: 166px;
         }
     </style>
 </head>
@@ -195,7 +195,7 @@
                 <!-- Main Tabs -->
                 <div class="hidden lg:flex items-center space-x-2 border-l border-white/10 pl-8">
                     <a id="tab-worksheet" href="#" target="_blank" class="nav-tab">Worksheet</a>
-                    <a id="tab-pertest" href="#" target="_blank" class="nav-tab">PRETEST</a>
+                    <a id="tab-pretest" href="#" target="_blank" class="nav-tab">Pretest</a>
                     <a id="tab-review" href="#" target="_blank" class="nav-tab">Review</a>
                 </div>
             </div>
@@ -360,7 +360,7 @@
             teacherName: "Mr. Anderson",
             tabUrls: {
                 worksheet: "#",
-                homework: "#",
+                pretest: "#",
                 review: "#"
             },
             missions: [
@@ -554,11 +554,11 @@
 
         function editTabUrls() {
             const w = prompt("WORKSHEET URL:", appData.tabUrls.worksheet);
-            const h = prompt("HOMEWORK URL:", appData.tabUrls.homework);
+            const p = prompt("PRETEST URL:", appData.tabUrls.pretest);
             const r = prompt("REVIEW URL:", appData.tabUrls.review);
             
             if (w !== null) appData.tabUrls.worksheet = w;
-            if (h !== null) appData.tabUrls.homework = h;
+            if (p !== null) appData.tabUrls.pretest = p;
             if (r !== null) appData.tabUrls.review = r;
             
             updateTabHrefs();
@@ -567,7 +567,7 @@
 
         function updateTabHrefs() {
             document.getElementById('tab-worksheet').href = appData.tabUrls.worksheet || "#";
-            document.getElementById('tab-homework').href = appData.tabUrls.homework || "#";
+            document.getElementById('tab-pretest').href = appData.tabUrls.pretest || "#";
             document.getElementById('tab-review').href = appData.tabUrls.review || "#";
         }
 
