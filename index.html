@@ -349,11 +349,6 @@
             siteSubtitle: "Galactic Portal",
             weeklyGoal: '"Step out of your comfort zone today!"',
             teacherName: "Mr. Anderson",
-            tabUrls: {
-                worksheet: "#",
-                pretest: "#",
-                review: "#"
-            },
             missions: [
                 { id: 1, title: "Daily Vocabulary Quiz", desc: "Review 10 new words", exp: 50, completed: false, icon: "fas fa-spell-check" },
                 { id: 2, title: "Shadowing Practice", desc: "5 Minutes with TED Talk", exp: 100, completed: false, icon: "fas fa-microphone" },
@@ -542,25 +537,6 @@
         }
 
         // --- UI HELPERS ---
-
-        function editTabUrls() {
-            const w = prompt("WORKSHEET URL:", appData.tabUrls.worksheet);
-            const p = prompt("PRETEST URL:", appData.tabUrls.pretest);
-            const r = prompt("REVIEW URL:", appData.tabUrls.review);
-            
-            if (w !== null) appData.tabUrls.worksheet = w;
-            if (p !== null) appData.tabUrls.pretest = p;
-            if (r !== null) appData.tabUrls.review = r;
-            
-            updateTabHrefs();
-            showToast("TABS UPDATED");
-        }
-
-        function updateTabHrefs() {
-            document.getElementById('tab-worksheet').href = appData.tabUrls.worksheet || "#";
-            document.getElementById('tab-pretest').href = appData.tabUrls.pretest || "#";
-            document.getElementById('tab-review').href = appData.tabUrls.review || "#";
-        }
 
         function addMission() {
             const title = prompt("Mission Title:");
